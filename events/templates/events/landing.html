@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Eventra</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .landing-container {
+            background: white;
+            padding: 60px 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 42px;
+            font-weight: 700;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 18px;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+        .connect-button {
+            display: inline-block;
+            background-color: #4285f4;
+            color: white;
+            padding: 16px 32px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
+        }
+        .connect-button:hover {
+            background-color: #3367d6;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(66, 133, 244, 0.5);
+        }
+        .features {
+            margin-top: 50px;
+            text-align: center;
+        }
+        .features h2 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .feature-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            color: #555;
+        }
+        .feature-item::before {
+            content: "✓";
+            color: #4CAF50;
+            font-weight: bold;
+            font-size: 20px;
+            margin-right: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="landing-container">
+        <h1>Welcome to Eventra</h1>
+        <p class="subtitle">
+            Transform your unstructured text into organized calendar events.<br>
+            Connect your Google Calendar to get started.
+        </p>
+        
+        <a href="{% url 'accounts:google_calendar_connect' %}" class="connect-button">
+            Connect Google Calendar
+        </a>
+        
+        <div class="features">
+            <h2>Features</h2>
+            <div class="feature-item">Create events from natural language</div>
+            <div class="feature-item">Sync with Google Calendar</div>
+            <div class="feature-item">Visual calendar view</div>
+            <div class="feature-item">Edit and manage events</div>
+            <div class="feature-item">Invite guests to events</div>
+        </div>
+    </div>
+</body>
+</html>
+
