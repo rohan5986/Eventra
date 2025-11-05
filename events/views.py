@@ -752,3 +752,193 @@ def edit_event(request, event_id):
     }
     
     return render(request, 'events/edit_event.html', {'event': event, 'event_data': event_data})
+
+
+@login_required
+def search_events(request):
+    """
+    Search functionality for events.
+    Implements User Story #8: As a user, I want search functionality for past and future events.
+    """
+    # Require Google Calendar connection
+    from accounts.models import UserProfile
+    google_calendar_connected = False
+    try:
+        profile = request.user.profile
+        google_calendar_connected = profile.google_calendar_connected
+    except UserProfile.DoesNotExist:
+        pass
+    
+    # Redirect to home/landing if not connected
+    if not google_calendar_connected:
+        messages.info(request, 'Please connect your Google Calendar to use Eventra.')
+        return redirect('events:home')
+    
+    # Get search parameters
+    query = request.GET.get('q', '').strip()
+    time_filter = request.GET.get('time', 'all')  # 'all', 'upcoming', 'past'
+    
+    # Start with all user events
+    events = Event.objects.filter(user=request.user).exclude(
+        original_text__startswith='Imported from Google Calendar'
+    )
+    
+    # Apply time filter
+    now = timezone.now()
+    if time_filter == 'upcoming':
+        events = events.filter(start_datetime__gte=now)
+    elif time_filter == 'past':
+        events = events.filter(start_datetime__lt=now)
+    
+    # Apply search query if provided
+    if query:
+        from django.db.models import Q
+        events = events.filter(
+            Q(title__icontains=query) |
+            Q(description__icontains=query) |
+            Q(location__icontains=query)
+        )
+    
+    # Order events
+    if time_filter == 'past':
+        events = events.order_by('-start_datetime')  # Most recent first for past events
+    else:
+        events = events.order_by('start_datetime')  # Chronological for upcoming/all
+    
+    # Fetch Google Calendar events if connected
+    google_calendar_events = []
+    if google_calendar_connected:
+        try:
+            creds_dict = profile.get_credentials_dict()
+            if creds_dict:
+                service = GoogleCalendarService.from_credentials_dict(creds_dict)
+                from datetime import timedelta
+                
+                # Set time range based on filter
+                if time_filter == 'past':
+                    time_min = now - timedelta(days=365)  # Past year
+                    time_max = now
+                elif time_filter == 'upcoming':
+                    time_min = now
+                    time_max = now + timedelta(days=365)  # Next year
+                else:
+                    time_min = now - timedelta(days=365)
+                    time_max = now + timedelta(days=365)
+                
+                google_events = service.get_events(time_min=time_min, time_max=time_max)
+                
+                # Color map for Google Calendar events
+                color_map = {
+                    '1': '#a4bdfc', '2': '#7ae7bf', '3': '#dbadff', '4': '#ff887c',
+                    '5': '#fbd75b', '6': '#ffb878', '7': '#46d6db', '8': '#e1e1e1',
+                    '9': '#5484ed', '10': '#51b749', '11': '#dc2127',
+                }
+                
+                # Filter and process Google Calendar events
+                for g_event in google_events:
+                    start = g_event.get('start', {})
+                    end = g_event.get('end', {})
+                    
+                    if 'dateTime' in start:
+                        start_str = start['dateTime']
+                    elif 'date' in start:
+                        start_str = start['date'] + 'T00:00:00'
+                    else:
+                        continue
+                    
+                    if 'dateTime' in end:
+                        end_str = end['dateTime']
+                    elif 'date' in end:
+                        end_str = end['date'] + 'T23:59:59'
+                    else:
+                        continue
+                    
+                    try:
+                        start_dt = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
+                        end_dt = datetime.fromisoformat(end_str.replace('Z', '+00:00'))
+                        if timezone.is_naive(start_dt):
+                            start_dt = timezone.make_aware(start_dt)
+                        if timezone.is_naive(end_dt):
+                            end_dt = timezone.make_aware(end_dt)
+                        
+                        title = g_event.get('summary', 'Untitled Event')
+                        description = g_event.get('description', '')
+                        location = g_event.get('location', '')
+                        
+                        # Apply search query to Google Calendar events
+                        if query:
+                            query_lower = query.lower()
+                            if not (query_lower in title.lower() or 
+                                   query_lower in description.lower() or 
+                                   query_lower in location.lower()):
+                                continue
+                        
+                        color_id = g_event.get('colorId', '1')
+                        event_color = color_map.get(str(color_id), '#4285f4')
+                        
+                        google_calendar_events.append({
+                            'title': title,
+                            'description': description,
+                            'location': location,
+                            'start_datetime': start_dt,
+                            'end_datetime': end_dt,
+                            'from_google': True,
+                            'google_event_id': g_event.get('id', ''),
+                            'color': event_color
+                        })
+                    except (ValueError, AttributeError):
+                        continue
+                        
+        except Exception as e:
+            print(f"Error fetching Google Calendar events for search: {e}")
+    
+    # Combine results
+    all_search_results = []
+    
+    # Add Eventra events
+    for event in events:
+        all_search_results.append({
+            'title': event.title or '',
+            'description': event.description or '',
+            'location': event.location or '',
+            'start_datetime': event.start_datetime,
+            'end_datetime': event.end_datetime,
+            'from_google': event.synced_to_google,
+            'event_id': event.id,
+            'is_past': event.start_datetime < now
+        })
+    
+    # Add Google Calendar events (avoid duplicates)
+    eventra_google_ids = set(events.filter(synced_to_google=True).exclude(
+        google_calendar_event_id__isnull=True
+    ).values_list('google_calendar_event_id', flat=True))
+    
+    for g_event in google_calendar_events:
+        google_event_id = g_event.get('google_event_id')
+        if google_event_id not in eventra_google_ids:
+            all_search_results.append({
+                'title': g_event.get('title', ''),
+                'description': g_event.get('description', ''),
+                'location': g_event.get('location', ''),
+                'start_datetime': g_event.get('start_datetime'),
+                'end_datetime': g_event.get('end_datetime'),
+                'from_google': True,
+                'event_id': None,
+                'is_past': g_event.get('start_datetime') < now
+            })
+    
+    # Sort results
+    if time_filter == 'past':
+        all_search_results.sort(key=lambda x: x['start_datetime'], reverse=True)
+    else:
+        all_search_results.sort(key=lambda x: x['start_datetime'])
+    
+    context = {
+        'search_results': all_search_results,
+        'query': query,
+        'time_filter': time_filter,
+        'google_calendar_connected': google_calendar_connected,
+        'result_count': len(all_search_results)
+    }
+    
+    return render(request, 'events/search_events.html', context)

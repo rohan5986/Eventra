@@ -7,182 +7,267 @@
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            max-width: 800px;
-            margin: 50px auto;
+            margin: 0;
             padding: 20px;
-            background-color: #f5f5f5;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+        
         .container {
             background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
         }
+        
         h1 {
-            color: #333;
-            margin-bottom: 30px;
-        }
-        .event-details {
-            margin-bottom: 30px;
-        }
-        .detail-row {
+            color: #2c3e50;
             margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
+            font-size: 32px;
+            font-weight: 700;
         }
-        .detail-row:last-child {
-            border-bottom: none;
+        
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 15px;
         }
-        .detail-label {
-            font-weight: 600;
-            color: #666;
-            margin-bottom: 5px;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .detail-value {
-            color: #333;
-            font-size: 16px;
-        }
+        
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
+        
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             font-weight: 600;
-            color: #555;
+            color: #2c3e50;
+            font-size: 15px;
         }
-        input, textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            font-family: inherit;
-        }
+        
+        input[type="text"],
+        input[type="datetime-local"],
         textarea {
-            min-height: 80px;
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.3s;
         }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .color-section {
+            margin-top: 10px;
+        }
+        
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+        
+        .color-option {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .color-option:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .color-option.selected {
+            border-color: #2c3e50;
+            transform: scale(1.1);
+        }
+        
+        .color-option.selected::after {
+            content: "✓";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #2c3e50;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .help-text {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-top: 8px;
+        }
+        
         .button-group {
             display: flex;
-            gap: 10px;
+            gap: 12px;
+            margin-top: 30px;
         }
+        
         button {
-            padding: 12px 24px;
+            flex: 1;
+            padding: 14px 28px;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 16px;
             font-weight: 600;
+            transition: all 0.3s;
         }
+        
         .btn-confirm {
-            background-color: #4CAF50;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             color: white;
         }
+        
         .btn-confirm:hover {
-            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(17, 153, 142, 0.4);
         }
+        
         .btn-cancel {
-            background-color: #f44336;
+            background: #e74c3c;
             color: white;
         }
+        
         .btn-cancel:hover {
-            background-color: #da190b;
+            background: #c0392b;
+            transform: translateY(-2px);
         }
-        .color-option:hover {
-            transform: scale(1.1) !important;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 25px;
+            }
+            
+            h1 {
+                font-size: 26px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .color-grid {
+                grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+            }
+            
+            .color-option {
+                width: 50px;
+                height: 50px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Preview Event</h1>
-        <p style="color: #666; margin-bottom: 30px;">Review the parsed event details. You can edit them before confirming.</p>
+        <h1>👀 Preview Event</h1>
+        <p class="subtitle">Review and edit the parsed event details before confirming.</p>
         
         <form method="post">
             {% csrf_token %}
             
-            <div class="event-details">
-                <div class="form-group">
-                    <label for="title">Title</label>
-                    <input type="text" name="title" id="title" value="{{ event_data.title }}" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="description">Description</label>
-                    <textarea name="description" id="description">{{ event_data.description }}</textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label for="location">Location</label>
-                    <input type="text" name="location" id="location" value="{{ event_data.location }}">
-                </div>
-                
-                <div class="form-group">
-                    <label for="start_datetime">Start Date & Time</label>
-                    <input type="datetime-local" name="start_datetime" id="start_datetime" value="{{ event_data.start_datetime_local }}" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="end_datetime">End Date & Time</label>
-                    <input type="datetime-local" name="end_datetime" id="end_datetime" value="{{ event_data.end_datetime_local }}" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="color_id">Event Color</label>
-                    <input type="hidden" name="color_id" id="color_id" value="{{ event_data.color_id|default:'1' }}">
-                    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px;">
-                        <div class="color-option" data-color="1" style="width: 50px; height: 50px; background-color: #a4bdfc; border-radius: 8px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s;" title="Lavender" onclick="selectColor('1')"></div>
-                        <div class="color-option" data-color="2" style="width: 50px; height: 50px; background-color: #7ae7bf; border-radius: 8px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s;" title="Sage" onclick="selectColor('2')"></div>
-                        <div class="color-option" data-color="3" style="width: 50px; height: 50px; background-color: #dbadff; border-radius: 8px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s;" title="Grape" onclick="selectColor('3')"></div>
-                        <div class="color-option" data-color="4" style="width: 50px; height: 50px; background-color: #ff887c; border-radius: 8px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s;" title="Flamingo" onclick="selectColor('4')"></div>
-                        <div class="color-option" data-color="5" style="width: 50px; height: 50px; background-color: #fbd75b; border-radius: 8px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s;" title="Banana" onclick="selectColor('5')"></div>
-                        <div class="color-option" data-color="6" style="width: 50px; height: 50px; background-color: #ffb878; border-radius: 8px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s;" title="Tangerine" onclick="selectColor('6')"></div>
-                        <div class="color-option" data-color="7" style="width: 50px; height: 50px; background-color: #46d6db; border-radius: 8px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s;" title="Peacock" onclick="selectColor('7')"></div>
-                        <div class="color-option" data-color="8" style="width: 50px; height: 50px; background-color: #e1e1e1; border-radius: 8px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s;" title="Graphite" onclick="selectColor('8')"></div>
-                        <div class="color-option" data-color="9" style="width: 50px; height: 50px; background-color: #5484ed; border-radius: 8px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s;" title="Blueberry" onclick="selectColor('9')"></div>
-                        <div class="color-option" data-color="10" style="width: 50px; height: 50px; background-color: #51b749; border-radius: 8px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s;" title="Basil" onclick="selectColor('10')"></div>
-                        <div class="color-option" data-color="11" style="width: 50px; height: 50px; background-color: #dc2127; border-radius: 8px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s;" title="Tomato" onclick="selectColor('11')"></div>
-                    </div>
-                </div>
-                <script>
-                    function selectColor(colorId) {
-                        document.getElementById('color_id').value = colorId;
-                        // Update visual selection
-                        document.querySelectorAll('.color-option').forEach(option => {
-                            if (option.dataset.color === colorId) {
-                                option.style.border = '3px solid #333';
-                                option.style.transform = 'scale(1.1)';
-                            } else {
-                                option.style.border = '3px solid transparent';
-                                option.style.transform = 'scale(1)';
-                            }
-                        });
-                    }
-                    
-                    // Set initial selection on page load
-                    document.addEventListener('DOMContentLoaded', function() {
-                        const currentColor = document.getElementById('color_id').value || '1';
-                        selectColor(currentColor);
-                    });
-                </script>
-                
-                <div class="form-group">
-                    <label for="guest_emails">Guest Emails (comma-separated)</label>
-                    <input type="text" name="guest_emails" id="guest_emails" value="{{ event_data.guest_emails|default:'' }}" placeholder="email1@example.com, email2@example.com">
-                    <div style="font-size: 12px; color: #666; margin-top: 5px;">Enter email addresses separated by commas to send calendar invitations</div>
+            <div class="form-group">
+                <label for="title">📝 Title</label>
+                <input type="text" name="title" id="title" value="{{ event_data.title }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">📄 Description</label>
+                <textarea name="description" id="description">{{ event_data.description }}</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="location">📍 Location</label>
+                <input type="text" name="location" id="location" value="{{ event_data.location }}">
+            </div>
+            
+            <div class="form-group">
+                <label for="start_datetime">🕐 Start Date & Time</label>
+                <input type="datetime-local" name="start_datetime" id="start_datetime" value="{{ event_data.start_datetime_local }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="end_datetime">🕑 End Date & Time</label>
+                <input type="datetime-local" name="end_datetime" id="end_datetime" value="{{ event_data.end_datetime_local }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label>🎨 Event Color</label>
+                <input type="hidden" name="color_id" id="color_id" value="{{ event_data.color_id|default:'1' }}">
+                <div class="color-grid">
+                    <div class="color-option" data-color="1" style="background-color: #a4bdfc;" title="Lavender"></div>
+                    <div class="color-option" data-color="2" style="background-color: #7ae7bf;" title="Sage"></div>
+                    <div class="color-option" data-color="3" style="background-color: #dbadff;" title="Grape"></div>
+                    <div class="color-option" data-color="4" style="background-color: #ff887c;" title="Flamingo"></div>
+                    <div class="color-option" data-color="5" style="background-color: #fbd75b;" title="Banana"></div>
+                    <div class="color-option" data-color="6" style="background-color: #ffb878;" title="Tangerine"></div>
+                    <div class="color-option" data-color="7" style="background-color: #46d6db;" title="Peacock"></div>
+                    <div class="color-option" data-color="8" style="background-color: #e1e1e1;" title="Graphite"></div>
+                    <div class="color-option" data-color="9" style="background-color: #5484ed;" title="Blueberry"></div>
+                    <div class="color-option" data-color="10" style="background-color: #51b749;" title="Basil"></div>
+                    <div class="color-option" data-color="11" style="background-color: #dc2127;" title="Tomato"></div>
                 </div>
             </div>
             
+            <div class="form-group">
+                <label for="guest_emails">✉️ Guest Emails (comma-separated)</label>
+                <input type="text" name="guest_emails" id="guest_emails" value="{{ event_data.guest_emails|default:'' }}" placeholder="email1@example.com, email2@example.com">
+                <div class="help-text">Enter email addresses separated by commas to send calendar invitations</div>
+            </div>
+            
             <div class="button-group">
-                <button type="submit" name="confirm" class="btn-confirm">Confirm & Create Event</button>
-                <button type="submit" name="cancel" class="btn-cancel">Cancel</button>
+                <button type="submit" name="confirm" class="btn-confirm">✓ Confirm & Create Event</button>
+                <button type="submit" name="cancel" class="btn-cancel">✕ Cancel</button>
             </div>
         </form>
     </div>
+    
+    <script>
+        // Color selection
+        const colorOptions = document.querySelectorAll('.color-option');
+        const colorInput = document.getElementById('color_id');
+        
+        colorOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                const colorId = this.dataset.color;
+                colorInput.value = colorId;
+                
+                colorOptions.forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+            });
+        });
+        
+        // Set initial selection
+        const currentColor = colorInput.value || '1';
+        const selectedOption = document.querySelector(`.color-option[data-color="${currentColor}"]`);
+        if (selectedOption) {
+            selectedOption.classList.add('selected');
+        }
+    </script>
 </body>
 </html>
-
