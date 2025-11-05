@@ -59,7 +59,7 @@ def create_event_from_text(request):
             try:
                 # Parse text using LLM
                 parser = LLMEventParser()
-                event_data = parser.parse_text_to_event(text_input)
+                event_data = parser.parse_text_to_event(text_input, user=request.user)
                 
                 # Convert ISO datetime strings to datetime objects
                 start_dt = datetime.fromisoformat(event_data['start'].replace('Z', '+00:00'))
