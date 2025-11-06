@@ -1,0 +1,7 @@
+Defaulting to user installation because normal site-packages is not writeable
+Requirement already satisfied: requests in /Users/abhi/Library/Python/3.11/lib/python/site-packages (2.31.0)
+Requirement already satisfied: charset-normalizer<4,>=2 in /Users/abhi/Library/Python/3.11/lib/python/site-packages (from requests) (3.4.1)
+Requirement already satisfied: idna<4,>=2.5 in /Users/abhi/Library/Python/3.11/lib/python/site-packages (from requests) (3.10)
+Requirement already satisfied: urllib3<3,>=1.21.1 in /Users/abhi/Library/Python/3.11/lib/python/site-packages (from requests) (2.3.0)
+Requirement already satisfied: certifi>=2017.4.17 in /Users/abhi/Library/Python/3.11/lib/python/site-packages (from requests) (2025.1.31)
+Could not fetch URL https://pypi.org/simple/pip/: There was a problem confirming the ssl certificate: HTTPSConnectionPool(host='pypi.org', port=443): Max retries exceeded with url: /simple/pip/ (Caused by SSLError(SSLCertVerificationError('OSStatus -26276'))) - skipping

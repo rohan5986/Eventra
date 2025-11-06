@@ -61,3 +61,4 @@ class GeocodingService:
         """Check if the geocoding service is properly configured."""
         return bool(self.api_key and self.api_key != 'your-google-maps-api-key-here')
 
+
