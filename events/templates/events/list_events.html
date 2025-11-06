@@ -456,6 +456,61 @@
             }
         }
 
+        /* Map Styles */
+        .map-container {
+            width: 100%;
+            padding: 20px 0;
+        }
+        
+        .map-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #7f8c8d;
+            background: #f8f9fa;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+        
+        .map-config-message {
+            text-align: center;
+            padding: 60px 40px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 12px;
+            color: #2c3e50;
+        }
+        
+        .map-config-message h3 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        
+        .map-config-message ol {
+            display: inline-block;
+            max-width: 600px;
+            margin: 0 auto;
+            padding-left: 30px;
+        }
+        
+        .map-config-message li {
+            margin: 15px 0;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        
+        .map-config-message a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .map-config-message code {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+        }
+
         /* Responsive Design */
         @media (max-width: 768px) {
             .container {
@@ -472,6 +527,10 @@
             
             .calendar-day {
                 min-height: 80px;
+            }
+            
+            #event-map {
+                height: 400px !important;
             }
         }
     </style>
@@ -520,6 +579,8 @@
         <div class="tabs">
             <button class="tab-button active" onclick="switchTab('list', this)">📋 List View</button>
             <button class="tab-button" onclick="switchTab('calendar', this)">📆 Calendar View</button>
+            <button class="tab-button" onclick="switchTab('map', this)">🗺️ Map View</button>
+            <button class="tab-button" onclick="switchTab('online', this)">💻 Online Events {% if online_events %}({{ online_events|length }}){% endif %}</button>
         </div>
         
         <!-- List Tab Content -->
@@ -543,6 +604,7 @@
                                     {% csrf_token %}
                                     <button type="submit" onclick="return confirm('Are you sure you want to delete this event?');" class="btn-delete">🗑️ Delete</button>
                                 </form>
+                                <button onclick="openNotificationSettings('{{ event.title|escapejs }}_{{ event.start_datetime|date:'c' }}', '{{ event.title|escapejs }}', '{{ event.start_datetime|date:'c' }}')" class="btn-edit" style="background: #f39c12; border: none; cursor: pointer;">🔔 Reminders</button>
                             </div>
                         </li>
                     {% endfor %}
@@ -580,10 +642,123 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Map Tab Content -->
+        <div id="map-tab" class="tab-content">
+            {% if maps_configured %}
+                <div class="map-container">
+                    <!-- Map controls -->
+                    <div style="margin-bottom: 15px;">
+                        <button onclick="showAllMarkers()" class="btn" style="background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                            👁️ Show All Hidden Events
+                        </button>
+                    </div>
+                    <div id="event-map" style="width: 100%; height: 600px; border-radius: 12px;"></div>
+                    {% if not events_with_locations %}
+                        <div class="map-message">
+                            <p>📍 No events with locations to display on map.</p>
+                            <p style="font-size: 14px; color: #7f8c8d; margin-top: 10px;">Add location information to your events to see them on the map!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="map-config-message">
+                    <h3>🗺️ Google Maps Not Configured</h3>
+                    <p>To enable map visualization, you need to:</p>
+                    <ol style="text-align: left; margin-top: 20px;">
+                        <li>Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
+                        <li>Enable the <strong>Maps JavaScript API</strong> and <strong>Geocoding API</strong></li>
+                        <li>Create an API key</li>
+                        <li>Add the API key to your <code>.env</code> file as <code>GOOGLE_MAPS_API_KEY</code></li>
+                        <li>Restart the server</li>
+                    </ol>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Online Events Tab Content -->
+        <div id="online-tab" class="tab-content">
+            {% if online_events %}
+                <div class="online-events-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white; margin-bottom: 20px;">
+                    <h2 style="margin: 0 0 10px 0; font-size: 24px;">💻 Virtual & Online Events</h2>
+                    <p style="margin: 0; opacity: 0.9;">Events without physical locations (Zoom, Teams, Google Meet, etc.)</p>
+                </div>
+                
+                <ul class="event-list">
+                    {% for event in online_events %}
+                        <li class="event-item" style="border-left: 4px solid {{ event.color }};">
+                            <h3>💻 {{ event.title }}</h3>
+                            {% if event.description %}
+                                <p><strong>Description:</strong> {{ event.description }}</p>
+                            {% endif %}
+                            <p><strong>📍 Join Info:</strong> {{ event.location }}</p>
+                            <p><strong>🕐 Start:</strong> {{ event.start_datetime|date:"F d, Y at g:i A" }}</p>
+                            <p><strong>🕑 End:</strong> {{ event.end_datetime|date:"F d, Y at g:i A" }}</p>
+                            {% if 'http' in event.location or 'zoom' in event.location|lower %}
+                                <div style="margin-top: 10px;">
+                                    <a href="{{ event.location }}" target="_blank" class="btn" style="background: #3498db; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; display: inline-block; font-size: 14px;">
+                                        🔗 Join Meeting
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 80px; height: 80px; margin: 0 auto;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <h3>No Online Events</h3>
+                    <p>You don't have any virtual meetings or online events scheduled.</p>
+                    <p style="font-size: 14px; color: #7f8c8d; margin-top: 10px;">Events with Zoom, Teams, or Google Meet links will appear here automatically!</p>
+                </div>
+            {% endif %}
+        </div>
     </div>
     
     <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
+    
+    <!-- Notification Banner -->
+    <div id="notification-banner" style="display: none; position: fixed; bottom: 20px; right: 20px; max-width: 400px; background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); padding: 20px; z-index: 10000; border-left: 5px solid #3498db;">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+            <h3 style="margin: 0; color: #2c3e50; font-size: 18px;">⏰ Event Reminder</h3>
+            <button onclick="closeNotificationBanner()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #7f8c8d; line-height: 1;">×</button>
+        </div>
+        <div id="notification-content"></div>
+    </div>
+    
+    <!-- Notification Settings Modal -->
+    <div id="notification-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10001; justify-content: center; align-items: center;">
+        <div style="background: white; border-radius: 16px; padding: 30px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px;">
+                <h2 style="margin: 0; color: #2c3e50;">🔔 Set Reminders</h2>
+                <button onclick="closeNotificationModal()" style="background: none; border: none; font-size: 32px; cursor: pointer; color: #7f8c8d; line-height: 1;">×</button>
+            </div>
+            
+            <p id="modal-event-title" style="color: #7f8c8d; font-size: 16px; margin-bottom: 20px; font-weight: 600;"></p>
+            
+            <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 16px;">Add New Reminder</h3>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <input type="number" id="reminder-time" min="1" placeholder="Time" style="flex: 1; min-width: 100px; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px;">
+                    <select id="reminder-unit" style="flex: 1; min-width: 120px; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px;">
+                        <option value="minutes">Minutes</option>
+                        <option value="hours">Hours</option>
+                        <option value="days">Days</option>
+                    </select>
+                    <button onclick="addReminder()" style="background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">Add</button>
+                </div>
+                <p style="margin: 10px 0 0 0; color: #7f8c8d; font-size: 12px;">Example: "30 minutes" or "1 day"</p>
+            </div>
+            
+            <div>
+                <h3 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 16px;">Current Reminders</h3>
+                <div id="reminders-list"></div>
+            </div>
+        </div>
+    </div>
     
     <script>
         // Tab switching
@@ -601,6 +776,9 @@
             
             if (tabName === 'calendar') {
                 renderCalendar();
+            } else if (tabName === 'map') {
+                // Initialize map when map tab is opened
+                setTimeout(initMap, 100); // Small delay to ensure map container is visible
             }
         }
         
@@ -737,7 +915,344 @@
             if (calendarTab && calendarTab.classList.contains('active')) {
                 renderCalendar();
             }
+            
+            // Check for custom notifications
+            checkCustomNotifications();
+            
+            // Request notification permission if not already granted
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
         });
+        
+        // All events data for notifications
+        const allEventsForNotifications = [
+            {% for event in all_events %}
+            {
+                id: "{{ event.title|escapejs }}_{{ event.start_datetime|date:'c' }}",
+                title: "{{ event.title|escapejs }}",
+                location: "{{ event.location|escapejs }}",
+                start: new Date("{{ event.start_datetime|date:'c' }}"),
+                description: "{{ event.description|escapejs|default:'' }}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+        
+        // Notification management functions
+        function openNotificationSettings(eventId, eventTitle, eventStart) {
+            const modal = document.getElementById('notification-modal');
+            const modalTitle = document.getElementById('modal-event-title');
+            const remindersList = document.getElementById('reminders-list');
+            
+            modal.dataset.eventId = eventId;
+            modal.dataset.eventTitle = eventTitle;
+            modal.dataset.eventStart = eventStart;
+            
+            modalTitle.textContent = eventTitle;
+            
+            // Load existing reminders
+            loadReminders(eventId, remindersList);
+            
+            modal.style.display = 'flex';
+        }
+        
+        function closeNotificationModal() {
+            document.getElementById('notification-modal').style.display = 'none';
+        }
+        
+        function loadReminders(eventId, container) {
+            const reminders = JSON.parse(localStorage.getItem(`reminders_${eventId}`) || '[]');
+            
+            if (reminders.length === 0) {
+                container.innerHTML = '<p style="color: #7f8c8d; font-style: italic;">No reminders set</p>';
+                return;
+            }
+            
+            container.innerHTML = reminders.map((reminder, index) => `
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: #2c3e50; font-weight: 600;">🔔 ${reminder.label}</span>
+                    <button onclick="removeReminder('${eventId}', ${index})" style="background: #e74c3c; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">Remove</button>
+                </div>
+            `).join('');
+        }
+        
+        function addReminder() {
+            const modal = document.getElementById('notification-modal');
+            const eventId = modal.dataset.eventId;
+            const reminderTime = document.getElementById('reminder-time').value;
+            const reminderUnit = document.getElementById('reminder-unit').value;
+            
+            if (!reminderTime) {
+                alert('Please enter a time value');
+                return;
+            }
+            
+            const reminders = JSON.parse(localStorage.getItem(`reminders_${eventId}`) || '[]');
+            
+            let minutes = 0;
+            let label = '';
+            
+            if (reminderUnit === 'minutes') {
+                minutes = parseInt(reminderTime);
+                label = `${reminderTime} minute${reminderTime > 1 ? 's' : ''} before`;
+            } else if (reminderUnit === 'hours') {
+                minutes = parseInt(reminderTime) * 60;
+                label = `${reminderTime} hour${reminderTime > 1 ? 's' : ''} before`;
+            } else if (reminderUnit === 'days') {
+                minutes = parseInt(reminderTime) * 60 * 24;
+                label = `${reminderTime} day${reminderTime > 1 ? 's' : ''} before`;
+            }
+            
+            reminders.push({ minutes, label });
+            localStorage.setItem(`reminders_${eventId}`, JSON.stringify(reminders));
+            
+            loadReminders(eventId, document.getElementById('reminders-list'));
+            document.getElementById('reminder-time').value = '';
+            
+            showToast('Reminder added!', 'success');
+        }
+        
+        function removeReminder(eventId, index) {
+            const reminders = JSON.parse(localStorage.getItem(`reminders_${eventId}`) || '[]');
+            reminders.splice(index, 1);
+            localStorage.setItem(`reminders_${eventId}`, JSON.stringify(reminders));
+            
+            loadReminders(eventId, document.getElementById('reminders-list'));
+            showToast('Reminder removed', 'info');
+        }
+        
+        function checkCustomNotifications() {
+            const now = new Date();
+            
+            allEventsForNotifications.forEach(event => {
+                const reminders = JSON.parse(localStorage.getItem(`reminders_${event.id}`) || '[]');
+                
+                reminders.forEach(reminder => {
+                    const notifKey = `shown_${event.id}_${reminder.minutes}`;
+                    
+                    // Check if already shown
+                    if (localStorage.getItem(notifKey)) {
+                        return;
+                    }
+                    
+                    const timeDiff = event.start - now;
+                    const minutesDiff = Math.floor(timeDiff / (1000 * 60));
+                    
+                    // Show notification if within the time window (with 2-minute tolerance)
+                    if (minutesDiff >= reminder.minutes - 1 && minutesDiff <= reminder.minutes + 1) {
+                        showEventNotification(event, reminder.label);
+                        localStorage.setItem(notifKey, 'true');
+                    }
+                });
+            });
+        }
+        
+        function showEventNotification(event, timeLabel) {
+            const banner = document.getElementById('notification-banner');
+            const content = document.getElementById('notification-content');
+            
+            content.innerHTML = `
+                <div style="margin-bottom: 8px;">
+                    <p style="margin: 0; font-size: 16px; font-weight: 600; color: #2c3e50;">${event.title}</p>
+                    <p style="margin: 4px 0; color: #3498db; font-size: 14px; font-weight: 600;">🔔 ${timeLabel}</p>
+                </div>
+                ${event.location ? `<p style="margin: 4px 0; color: #7f8c8d; font-size: 13px;">📍 ${event.location}</p>` : ''}
+                <p style="margin: 4px 0; color: #7f8c8d; font-size: 13px;">🕐 ${event.start.toLocaleString()}</p>
+            `;
+            
+            banner.style.display = 'block';
+            
+            // Browser notification
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(`${timeLabel} - ${event.title}`, {
+                    body: event.location ? `📍 ${event.location}` : `🕐 ${event.start.toLocaleString()}`,
+                    requireInteraction: false
+                });
+            }
+            
+            setTimeout(() => {
+                banner.style.display = 'none';
+            }, 10000);
+        }
+        
+        function closeNotificationBanner() {
+            document.getElementById('notification-banner').style.display = 'none';
+        }
+        
+        // Check for notifications every minute
+        setInterval(checkCustomNotifications, 60 * 1000);
+        
+        // Google Maps Integration
+        let map;
+        let markers = [];
+        let mapInitialized = false;
+        
+        // Event locations from Django
+        const eventLocations = [
+            {% for event in events_with_locations %}
+            {
+                title: "{{ event.title|escapejs }}",
+                location: "{{ event.location|escapejs }}",
+                lat: {{ event.lat }},
+                lng: {{ event.lng }},
+                start: "{{ event.start }}",
+                color: "{{ event.color }}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+        
+        function initMap() {
+            // Prevent multiple initializations
+            if (mapInitialized) {
+                return;
+            }
+            
+            const mapContainer = document.getElementById('event-map');
+            if (!mapContainer) {
+                return;
+            }
+            
+            {% if maps_configured and events_with_locations %}
+                // Default center (will be adjusted to fit all markers)
+                const defaultCenter = { lat: 37.7749, lng: -122.4194 }; // San Francisco
+                
+                // Initialize map
+                map = new google.maps.Map(mapContainer, {
+                    zoom: 12,
+                    center: defaultCenter,
+                    styles: [
+                        {
+                            featureType: 'poi',
+                            elementType: 'labels',
+                            stylers: [{ visibility: 'off' }]
+                        }
+                    ]
+                });
+                
+                // Create bounds to fit all markers
+                const bounds = new google.maps.LatLngBounds();
+                
+                // Add markers for each event location
+                eventLocations.forEach((event, index) => {
+                    const position = { lat: event.lat, lng: event.lng };
+                    
+                    // Create marker
+                    const marker = new google.maps.Marker({
+                        position: position,
+                        map: map,
+                        title: event.title,
+                        animation: google.maps.Animation.DROP,
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: 10,
+                            fillColor: event.color || '#667eea',
+                            fillOpacity: 0.8,
+                            strokeColor: '#ffffff',
+                            strokeWeight: 2
+                        }
+                    });
+                    
+                    // Create info window with remove and directions buttons
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: `
+                            <div style="padding: 10px; max-width: 280px;">
+                                <h3 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 16px;">${event.title}</h3>
+                                <p style="margin: 4px 0; color: #7f8c8d; font-size: 13px;">
+                                    <strong>📍 Location:</strong><br>${event.location}
+                                </p>
+                                <p style="margin: 4px 0; color: #7f8c8d; font-size: 13px;">
+                                    <strong>🕐 Time:</strong><br>${event.start}
+                                </p>
+                                <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+                                    <button 
+                                        onclick="getDirections(${event.lat}, ${event.lng}, '${event.title.replace(/'/g, "\\'")}')" 
+                                        style="flex: 1; padding: 8px 12px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600;">
+                                        🧭 Get Directions
+                                    </button>
+                                    <button 
+                                        onclick="removeMarkerFromMap(${index})" 
+                                        style="flex: 1; padding: 8px 12px; background: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600;">
+                                        🗑️ Hide
+                                    </button>
+                                </div>
+                            </div>
+                        `
+                    });
+                    
+                    // Add click listener to show info window
+                    marker.addListener('click', () => {
+                        // Close all other info windows
+                        markers.forEach(m => m.infoWindow.close());
+                        infoWindow.open(map, marker);
+                    });
+                    
+                    // Store marker with info window
+                    markers.push({marker, infoWindow});
+                    
+                    // Extend bounds to include this marker
+                    bounds.extend(position);
+                });
+                
+                // Fit map to show all markers
+                if (eventLocations.length > 0) {
+                    map.fitBounds(bounds);
+                    
+                    // Add some padding
+                    google.maps.event.addListenerOnce(map, 'bounds_changed', function() {
+                        if (eventLocations.length === 1) {
+                            map.setZoom(14); // Zoom closer if only one event
+                        }
+                    });
+                }
+                
+                mapInitialized = true;
+            {% endif %}
+        }
+        
+        // Get directions to event location
+        function getDirections(lat, lng, eventTitle) {
+            // Open Google Maps with directions from current location to event
+            // Using Google Maps URL scheme which works on all platforms
+            const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+            
+            // Open in new tab
+            window.open(directionsUrl, '_blank');
+            
+            showToast(`Opening directions to "${eventTitle}"`, 'success');
+        }
+        
+        // Remove marker from map (hide it)
+        function removeMarkerFromMap(index) {
+            if (markers[index]) {
+                markers[index].marker.setVisible(false);
+                markers[index].infoWindow.close();
+                
+                // Show a subtle notification
+                showToast('Event hidden from map (not deleted from calendar)', 'info');
+            }
+        }
+        
+        // Function to show all hidden markers again
+        function showAllMarkers() {
+            let showCount = 0;
+            markers.forEach(markerData => {
+                if (!markerData.marker.getVisible()) {
+                    markerData.marker.setVisible(true);
+                    showCount++;
+                }
+            });
+            
+            if (showCount > 0) {
+                showToast(`Showed ${showCount} hidden event(s)`, 'success');
+            } else {
+                showToast('No hidden events to show', 'info');
+            }
+        }
     </script>
+    
+    <!-- Load Google Maps API -->
+    {% if maps_configured %}
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap" async defer></script>
+    {% endif %}
 </body>
 </html>

@@ -305,11 +305,10 @@ def list_events(request):
         messages.info(request, 'Please connect your Google Calendar to use Eventra.')
         return redirect('events:home')
     
-    # Filter events from today onwards and exclude events imported from Google Calendar
+    # Filter events - show all events (past and future), exclude events imported from Google Calendar
     now = timezone.now()
     events = Event.objects.filter(
-        user=request.user,
-        start_datetime__gte=now
+        user=request.user
     ).exclude(
         original_text__startswith='Imported from Google Calendar'
     ).order_by('start_datetime')
@@ -329,12 +328,12 @@ def list_events(request):
                 creds_dict = profile.get_credentials_dict()
                 if creds_dict:
                     service = GoogleCalendarService.from_credentials_dict(creds_dict)
-                    # Get events from the past month to next 3 months
+                    # Get events from the past 6 months to next 6 months (to capture all events)
                     from datetime import timedelta
                     now = timezone.now()
                     # Format as UTC datetime objects for Google Calendar API
-                    time_min = now - timedelta(days=30)
-                    time_max = now + timedelta(days=90)
+                    time_min = now - timedelta(days=180)  # 6 months back
+                    time_max = now + timedelta(days=180)  # 6 months forward
                     google_events = service.get_events(time_min=time_min, time_max=time_max)
                     
                     print(f"DEBUG: Fetched {len(google_events)} events from Google Calendar")
@@ -352,8 +351,7 @@ def list_events(request):
                     
                     # Update events list after deletions (apply filter to exclude imported Google Calendar events)
                     events = Event.objects.filter(
-                        user=request.user,
-                        start_datetime__gte=now
+                        user=request.user
                     ).exclude(
                         original_text__startswith='Imported from Google Calendar'
                     ).order_by('start_datetime')
@@ -534,10 +532,110 @@ def list_events(request):
     for event in events:
         print(f"DEBUG: Eventra event: {event.title} - original_text starts with: '{event.original_text[:50]}...'")
     
+    # Prepare events with location data for map visualization
+    from .services.geocoding import GeocodingService
+    from decouple import config
+    from datetime import timedelta
+    import re
+    
+    geocoding_service = GeocodingService()
+    events_with_locations = []
+    online_events = []
+    
+    # Only show events from past month onwards (not old events from months ago)
+    one_month_ago = timezone.now() - timedelta(days=30)
+    
+    # Helper function to detect if event is online
+    def is_online_event(location_str):
+        if not location_str:
+            return False
+        location_lower = location_str.lower()
+        online_keywords = [
+            'zoom', 'online', 'virtual', 'remote', 'meet.google', 
+            'teams', 'webinar', 'webex', 'skype', 'http://', 'https://',
+            'join:', 'meeting link', 'video call', 'conference call'
+        ]
+        return any(keyword in location_lower for keyword in online_keywords)
+    
+    # Process all events (both Eventra and Google Calendar events)
+    for event_data in all_events:
+        # Skip events older than 1 month
+        if event_data['start_datetime'] < one_month_ago:
+            continue
+        
+        location = event_data.get('location', '')
+        
+        # Check if it's an online event
+        if location and is_online_event(location):
+            # Add to online events list
+            online_events.append({
+                'title': event_data['title'],
+                'location': location,
+                'start': event_data['start_datetime'].strftime('%Y-%m-%d %H:%M'),
+                'start_datetime': event_data['start_datetime'],
+                'end_datetime': event_data['end_datetime'],
+                'description': event_data.get('description', ''),
+                'color': event_data.get('color', '#4285f4')
+            })
+            continue  # Skip adding to map
+            
+        if location and location.strip():
+            # Check if we already have lat/lng (from database)
+            if event_data.get('event_id'):
+                # It's an Eventra event, might have coordinates in DB
+                try:
+                    db_event = Event.objects.get(id=event_data['event_id'])
+                    if db_event.latitude and db_event.longitude:
+                        events_with_locations.append({
+                            'title': event_data['title'],
+                            'location': location,
+                            'lat': float(db_event.latitude),
+                            'lng': float(db_event.longitude),
+                            'start': event_data['start_datetime'].strftime('%Y-%m-%d %H:%M'),
+                            'color': event_data.get('color', '#4285f4')
+                        })
+                    else:
+                        # Try to geocode and save
+                        coords = geocoding_service.geocode_address(location)
+                        if coords:
+                            db_event.latitude = coords[0]
+                            db_event.longitude = coords[1]
+                            db_event.save()
+                            events_with_locations.append({
+                                'title': event_data['title'],
+                                'location': location,
+                                'lat': coords[0],
+                                'lng': coords[1],
+                                'start': event_data['start_datetime'].strftime('%Y-%m-%d %H:%M'),
+                                'color': event_data.get('color', '#4285f4')
+                            })
+                except Event.DoesNotExist:
+                    pass
+            else:
+                # It's a Google Calendar event, geocode on the fly
+                coords = geocoding_service.geocode_address(location)
+                if coords:
+                    events_with_locations.append({
+                        'title': event_data['title'],
+                        'location': location,
+                        'lat': coords[0],
+                        'lng': coords[1],
+                        'start': event_data['start_datetime'].strftime('%Y-%m-%d %H:%M'),
+                        'color': event_data.get('color', '#4285f4')
+                    })
+    
+    # Get Google Maps API key for frontend
+    google_maps_api_key = config('GOOGLE_MAPS_API_KEY', default='')
+    maps_configured = google_maps_api_key and google_maps_api_key != 'your-google-maps-api-key-here'
+    
     return render(request, 'events/list_events.html', {
         'events': events,  # Keep original for list view - only Eventra-created events
         'all_events': all_events,  # Combined events for calendar view
-        'google_calendar_connected': google_calendar_connected
+        'google_calendar_connected': google_calendar_connected,
+        'events_with_locations': events_with_locations,
+        'online_events': online_events,  # Online/virtual events
+        'google_maps_api_key': google_maps_api_key if maps_configured else '',
+        'maps_configured': maps_configured
     })
 
 
