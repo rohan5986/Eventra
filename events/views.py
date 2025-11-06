@@ -11,28 +11,25 @@ from .services.google_calendar import GoogleCalendarService
 
 def home(request):
     """Home page - shows landing page or redirects to events if connected."""
-    # If user is not authenticated, show landing page with login/signup options
-    if not request.user.is_authenticated:
-        return render(request, 'events/landing.html', {
-            'google_calendar_connected': False
-        })
-    
-    # Check if Google Calendar is connected
+    # Check if Google Calendar is connected (only if user is authenticated)
     from accounts.models import UserProfile
     google_calendar_connected = False
-    try:
-        profile = request.user.profile
-        google_calendar_connected = profile.google_calendar_connected
-    except UserProfile.DoesNotExist:
-        pass
     
-    # If connected, redirect to events page
-    if google_calendar_connected:
-        return redirect('events:list_events')
+    if request.user.is_authenticated:
+        try:
+            profile = request.user.profile
+            google_calendar_connected = profile.google_calendar_connected
+        except UserProfile.DoesNotExist:
+            pass
+        
+        # If connected, redirect to events page
+        if google_calendar_connected:
+            return redirect('events:list_events')
     
-    # Otherwise, show landing page with connect button
+    # Show landing page (with login/signup buttons if not authenticated)
     return render(request, 'events/landing.html', {
-        'google_calendar_connected': google_calendar_connected
+        'google_calendar_connected': google_calendar_connected,
+        'user': request.user,  # Explicitly pass user to ensure it's in context
     })
 
 
