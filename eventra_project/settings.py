@@ -127,5 +127,10 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Login URL for @login_required decorator
-LOGIN_URL = '/admin/login/'
-LOGIN_REDIRECT_URL = '/events/'
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/events/home/'
+
+# Session settings for persistent login
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 days
+SESSION_SAVE_EVERY_REQUEST = False  # Don't update session on every request
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Keep session after browser close

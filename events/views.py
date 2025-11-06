@@ -10,10 +10,12 @@ from .services.google_calendar import GoogleCalendarService
 
 
 def home(request):
-    """Home page - requires Google Calendar connection before accessing app."""
-    # Require login first
+    """Home page - shows landing page or redirects to events if connected."""
+    # If user is not authenticated, show landing page with login/signup options
     if not request.user.is_authenticated:
-        return redirect(f'/admin/login/?next=/events/home/')
+        return render(request, 'events/landing.html', {
+            'google_calendar_connected': False
+        })
     
     # Check if Google Calendar is connected
     from accounts.models import UserProfile
@@ -86,7 +88,7 @@ def create_event_from_text(request):
                 # If user is not logged in, redirect to login first
                 if not request.user.is_authenticated:
                     messages.info(request, 'Please log in to save your event.')
-                    return redirect(f'/admin/login/?next=/events/preview/')
+                    return redirect(f'/accounts/login/?next=/events/preview/')
                 
                 return redirect('events:preview_event')
                 

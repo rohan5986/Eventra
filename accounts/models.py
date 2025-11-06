@@ -47,9 +47,8 @@ class SystemSettings(models.Model):
     
     LLM_PROVIDER_CHOICES = [
         ('openai', 'OpenAI'),
-        # Future providers can be added here:
-        # ('anthropic', 'Anthropic'),
-        # ('google', 'Google'),
+        ('anthropic', 'Anthropic'),
+        ('google', 'Google'),
     ]
     
     # Singleton ID to ensure only one instance exists
