@@ -181,9 +181,50 @@
             Smart, simple, and seamlessly integrated with Google Calendar.
         </p>
         
-        <a href="{% url 'accounts:google_calendar_connect' %}" class="connect-button">
-            🔗 Connect Google Calendar
-        </a>
+        {% if user.is_authenticated %}
+            <div style="margin-bottom: 20px;">
+                <p style="color: #7f8c8d; font-size: 14px; margin-bottom: 15px;">
+                    Logged in as <strong>{{ user.username }}</strong> | 
+                    <a href="{% url 'accounts:logout' %}" style="color: #e74c3c; text-decoration: none;">Logout</a>
+                </p>
+            </div>
+            {% if google_calendar_connected %}
+                <a href="{% url 'events:list_events' %}" class="connect-button">
+                    📅 View My Events
+                </a>
+            {% else %}
+                <a href="{% url 'accounts:google_calendar_connect' %}" class="connect-button">
+                    🔗 Connect Google Calendar
+                </a>
+            {% endif %}
+        {% else %}
+            <!-- Sign In and Sign Up Buttons for Unauthenticated Users -->
+            <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin: 30px 0;">
+                <a href="{% url 'accounts:login' %}" class="connect-button" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-width: 150px; font-size: 16px; padding: 15px 35px;">
+                    🔐 Sign In
+                </a>
+                <a href="{% url 'accounts:signup' %}" class="connect-button" style="background: linear-gradient(135deg, #4285f4 0%, #3367d6 100%); min-width: 150px; font-size: 16px; padding: 15px 35px;">
+                    ✨ Sign Up
+                </a>
+            </div>
+            <p style="color: #7f8c8d; font-size: 15px; margin-top: 10px; font-weight: 500;">
+                Create an account or sign in to get started with Eventra
+            </p>
+        {% endif %}
+        
+        <!-- Always show login/signup links at the bottom for easy access -->
+        {% if not user.is_authenticated %}
+        <div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid #e0e0e0;">
+            <p style="color: #7f8c8d; font-size: 14px; margin-bottom: 15px;">
+                Already have an account? 
+                <a href="{% url 'accounts:login' %}" style="color: #667eea; text-decoration: none; font-weight: 600;">Sign in</a>
+            </p>
+            <p style="color: #7f8c8d; font-size: 14px;">
+                New to Eventra? 
+                <a href="{% url 'accounts:signup' %}" style="color: #4285f4; text-decoration: none; font-weight: 600;">Create an account</a>
+            </p>
+        </div>
+        {% endif %}
         
         <div class="features">
             <h2>✨ What You Can Do</h2>
@@ -228,9 +269,21 @@
         
         <div class="cta-section">
             <p class="cta-text">Ready to simplify your scheduling?</p>
-            <a href="{% url 'accounts:google_calendar_connect' %}" class="connect-button">
-                Get Started Now →
-            </a>
+            {% if user.is_authenticated %}
+                {% if not google_calendar_connected %}
+                    <a href="{% url 'accounts:google_calendar_connect' %}" class="connect-button">
+                        Get Started Now →
+                    </a>
+                {% else %}
+                    <a href="{% url 'events:list_events' %}" class="connect-button">
+                        View My Events →
+                    </a>
+                {% endif %}
+            {% else %}
+                <a href="{% url 'accounts:signup' %}" class="connect-button">
+                    Get Started Now →
+                </a>
+            {% endif %}
         </div>
     </div>
 </body>

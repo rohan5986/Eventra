@@ -1,9 +1,83 @@
 from django.shortcuts import redirect, render
+from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.urls import reverse
 from decouple import config
 from events.services.google_calendar import GoogleCalendarService
+from .forms import UserRegistrationForm, UserLoginForm
+
+
+def signup(request):
+    """User registration view."""
+    # Allow access even if logged in (in case user wants to create another account)
+    # But show a message if already logged in
+    if request.method == 'POST':
+        form = UserRegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            # Create user profile
+            from .models import UserProfile
+            UserProfile.objects.create(user=user)
+            
+            # Auto-login the user
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password1')
+            user = authenticate(username=username, password=password)
+            if user:
+                login(request, user)
+                messages.success(request, f'Welcome to Eventra, {username}!')
+                return redirect('events:home')
+    else:
+        form = UserRegistrationForm()
+    
+    return render(request, 'accounts/signup.html', {'form': form})
+
+
+def user_login(request):
+    """User login view."""
+    # Allow access even if logged in (in case user wants to switch accounts)
+    # But redirect after successful login if already logged in
+    if request.method == 'POST':
+        form = UserLoginForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                login(request, user)
+                messages.success(request, f'Welcome back, {username}!')
+                
+                # Redirect to next page if specified, otherwise check if calendar is connected
+                next_url = request.GET.get('next')
+                if next_url:
+                    return redirect(next_url)
+                
+                # Check if Google Calendar is connected and redirect accordingly
+                from .models import UserProfile
+                try:
+                    profile = request.user.profile
+                    if profile.google_calendar_connected:
+                        return redirect('events:list_events')
+                except UserProfile.DoesNotExist:
+                    pass
+                
+                return redirect('events:home')
+            else:
+                messages.error(request, 'Invalid username or password.')
+        else:
+            messages.error(request, 'Invalid username or password.')
+    else:
+        form = UserLoginForm()
+    
+    return render(request, 'accounts/login.html', {'form': form})
+
+
+def user_logout(request):
+    """User logout view."""
+    logout(request)
+    messages.success(request, 'You have been logged out successfully.')
+    return redirect('events:home')
 
 
 @login_required

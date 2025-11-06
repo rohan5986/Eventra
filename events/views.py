@@ -10,27 +10,26 @@ from .services.google_calendar import GoogleCalendarService
 
 
 def home(request):
-    """Home page - requires Google Calendar connection before accessing app."""
-    # Require login first
-    if not request.user.is_authenticated:
-        return redirect(f'/admin/login/?next=/events/home/')
-    
-    # Check if Google Calendar is connected
+    """Home page - shows landing page or redirects to events if connected."""
+    # Check if Google Calendar is connected (only if user is authenticated)
     from accounts.models import UserProfile
     google_calendar_connected = False
-    try:
-        profile = request.user.profile
-        google_calendar_connected = profile.google_calendar_connected
-    except UserProfile.DoesNotExist:
-        pass
     
-    # If connected, redirect to events page
-    if google_calendar_connected:
-        return redirect('events:list_events')
+    if request.user.is_authenticated:
+        try:
+            profile = request.user.profile
+            google_calendar_connected = profile.google_calendar_connected
+        except UserProfile.DoesNotExist:
+            pass
+        
+        # If connected, redirect to events page
+        if google_calendar_connected:
+            return redirect('events:list_events')
     
-    # Otherwise, show landing page with connect button
+    # Show landing page (with login/signup buttons if not authenticated)
     return render(request, 'events/landing.html', {
-        'google_calendar_connected': google_calendar_connected
+        'google_calendar_connected': google_calendar_connected,
+        'user': request.user,  # Explicitly pass user to ensure it's in context
     })
 
 
@@ -59,7 +58,7 @@ def create_event_from_text(request):
             try:
                 # Parse text using LLM
                 parser = LLMEventParser()
-                event_data = parser.parse_text_to_event(text_input)
+                event_data = parser.parse_text_to_event(text_input, user=request.user)
                 
                 # Convert ISO datetime strings to datetime objects
                 start_dt = datetime.fromisoformat(event_data['start'].replace('Z', '+00:00'))
@@ -86,7 +85,7 @@ def create_event_from_text(request):
                 # If user is not logged in, redirect to login first
                 if not request.user.is_authenticated:
                     messages.info(request, 'Please log in to save your event.')
-                    return redirect(f'/admin/login/?next=/events/preview/')
+                    return redirect(f'/accounts/login/?next=/events/preview/')
                 
                 return redirect('events:preview_event')
                 
