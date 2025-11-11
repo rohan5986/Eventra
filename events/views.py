@@ -704,6 +704,7 @@ def edit_event(request, event_id):
     """Edit an existing event."""
     # Require Google Calendar connection
     from accounts.models import UserProfile
+    from .services.geocoding import GeocodingService
     try:
         profile = request.user.profile
         if not profile.google_calendar_connected:
@@ -779,6 +780,9 @@ def edit_event(request, event_id):
                 }
                 return render(request, 'events/edit_event.html', {'event': event, 'event_data': event_data})
             
+            # Check if location changed - if so, clear coordinates to trigger re-geocoding
+            location_changed = (event.location != edited_location)
+            
             # Update event fields
             event.title = edited_title
             event.description = edited_description
@@ -787,6 +791,23 @@ def edit_event(request, event_id):
             event.end_datetime = end_dt
             event.color_id = edited_color_id if edited_color_id else None
             event.guest_emails = edited_guest_emails if edited_guest_emails else None
+            
+            # If location changed, re-geocode to update map coordinates
+            if location_changed and edited_location.strip():
+                geocoding_service = GeocodingService()
+                coords = geocoding_service.geocode_address(edited_location)
+                if coords:
+                    event.latitude = coords[0]
+                    event.longitude = coords[1]
+                else:
+                    # Clear coordinates if geocoding fails
+                    event.latitude = None
+                    event.longitude = None
+            elif location_changed and not edited_location.strip():
+                # Location was cleared, remove coordinates
+                event.latitude = None
+                event.longitude = None
+            
             event.save()
             
             # Update Google Calendar if synced
