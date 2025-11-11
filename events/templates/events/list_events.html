@@ -1009,10 +1009,12 @@
             reminders.push({ minutes, label });
             localStorage.setItem(`reminders_${eventId}`, JSON.stringify(reminders));
             
+            console.log(`Added reminder: ${label} (${minutes} minutes before) for event ${eventId}`);
+            
             loadReminders(eventId, document.getElementById('reminders-list'));
             document.getElementById('reminder-time').value = '';
             
-            showToast('Reminder added!', 'success');
+            showToast(`Reminder added: ${label}`, 'success');
         }
         
         function removeReminder(eventId, index) {
@@ -1026,9 +1028,14 @@
         
         function checkCustomNotifications() {
             const now = new Date();
+            console.log('Checking notifications at:', now.toLocaleString());
             
             allEventsForNotifications.forEach(event => {
                 const reminders = JSON.parse(localStorage.getItem(`reminders_${event.id}`) || '[]');
+                
+                if (reminders.length > 0) {
+                    console.log(`Checking reminders for event: ${event.title}`, reminders);
+                }
                 
                 reminders.forEach(reminder => {
                     const notifKey = `shown_${event.id}_${reminder.minutes}`;
@@ -1041,8 +1048,12 @@
                     const timeDiff = event.start - now;
                     const minutesDiff = Math.floor(timeDiff / (1000 * 60));
                     
-                    // Show notification if within the time window (with 2-minute tolerance)
-                    if (minutesDiff >= reminder.minutes - 1 && minutesDiff <= reminder.minutes + 1) {
+                    console.log(`Event: ${event.title}, Time until: ${minutesDiff} minutes, Reminder set for: ${reminder.minutes} minutes before`);
+                    
+                    // Show notification if within the time window (with 3-minute tolerance)
+                    // This allows for some flexibility in timing
+                    if (minutesDiff >= reminder.minutes - 2 && minutesDiff <= reminder.minutes + 1) {
+                        console.log(`🔔 Triggering notification for ${event.title}: ${reminder.label}`);
                         showEventNotification(event, reminder.label);
                         localStorage.setItem(notifKey, 'true');
                     }
@@ -1085,8 +1096,38 @@
             document.getElementById('notification-backdrop').style.display = 'none';
         }
         
+        // Helper function to clear notification history (for testing)
+        // Run this in the browser console: clearNotificationHistory()
+        window.clearNotificationHistory = function() {
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('shown_')) {
+                    localStorage.removeItem(key);
+                }
+            });
+            console.log('✅ All notification history cleared. Reminders will trigger again.');
+        };
+        
+        // Helper function to view all reminders (for debugging)
+        window.viewAllReminders = function() {
+            console.log('=== All Event Reminders ===');
+            allEventsForNotifications.forEach(event => {
+                const reminders = JSON.parse(localStorage.getItem(`reminders_${event.id}`) || '[]');
+                if (reminders.length > 0) {
+                    console.log(`\n📅 ${event.title} (${event.start.toLocaleString()})`);
+                    reminders.forEach(r => console.log(`   🔔 ${r.label} (${r.minutes} min)`));
+                }
+            });
+            console.log('\n💡 Tip: Run clearNotificationHistory() to reset notification flags');
+        };
+        
+        // Check for notifications immediately on page load
+        checkCustomNotifications();
+        
         // Check for notifications every minute
         setInterval(checkCustomNotifications, 60 * 1000);
+        
+        console.log('🔔 Reminder system initialized!');
+        console.log('💡 Debug commands: clearNotificationHistory(), viewAllReminders()');
         
         // Google Maps Integration
         let map;
